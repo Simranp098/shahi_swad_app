@@ -1,0 +1,328 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style type="text/css">
+  body.login {
+    background: #0f172a !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+  }
+  #container {
+    background: transparent !important;
+    width: 100%;
+    max-width: 420px;
+    padding: 20px;
+  }
+  .login #content-main {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  }
+  .login .form-row {
+    padding: 8px 0;
+    border-bottom: none;
+  }
+  .login .form-row label {
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .login .form-row input[type="text"], 
+  .login .form-row input[type="password"] {
+    width: 100%;
+    padding: 10px 38px 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 14px;
+  }
+  .login .submit-row {
+    padding: 15px 0 0 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    text-align: center;
+  }
+  .login .submit-row input[type="submit"] {
+    width: 100%;
+    background: #0284c7;
+    color: #ffffff;
+    font-weight: 800;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  .forgot-link-box {
+    text-align: right;
+    margin-top: 8px;
+  }
+  .forgot-link-box a {
+    color: #0284c7;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .forgot-link-box a:hover {
+    text-decoration: underline;
+  }
+  .password-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  .eye-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    user-select: none;
+    font-size: 16px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .eye-toggle:hover {
+    opacity: 1;
+  }
+</style>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} login{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+{% if form.errors and not form.non_field_errors %}
+<p class="errornote">
+{% if form.errors.items|length == 1 %}{% translate "Please correct the error below." %}{% else %}{% translate "Please correct the errors below." %}{% endif %}
+</p>
+{% endif %}
+
+{% if form.non_field_errors %}
+{% for error in form.non_field_errors %}
+<p class="errornote">
+    {{ error }}
+</p>
+{% endfor %}
+{% endif %}
+
+<div id="content-main">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2 style="color: #0f172a; font-weight: 900; margin: 0; font-size: 22px;">Shahi Swad - Kitchen Portal</h2>
+        <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Admin & Order Management Dashboard</p>
+    </div>
+
+    <form action="{{ app_path }}" method="post" id="login-form">{% csrf_token %}
+      <div class="form-row">
+        {{ form.username.errors }}
+        {{ form.username.label_tag }} {{ form.username }}
+      </div>
+      <div class="form-row">
+        {{ form.password.errors }}
+        {{ form.password.label_tag }}
+        <div class="password-wrapper">
+            {{ form.password }}
+            <span class="eye-toggle" onclick="togglePasswordVisibility('id_password', 'eyeMain')" id="eyeMain">👁️</span>
+        </div>
+        <div class="forgot-link-box">
+            <a href="javascript:void(0)" onclick="openAdminResetModal()">🔑 Forgot Password?</a>
+        </div>
+      </div>
+      
+      <input type="hidden" name="next" value="{{ next }}">
+      
+      <div class="submit-row">
+        <input type="submit" value="{% translate 'Log in' %}">
+      </div>
+    </form>
+</div>
+
+<!-- Admin Forgot Password OTP Modal -->
+<div id="adminResetModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; justify-content:center; align-items:center;">
+    <div style="background:#ffffff; width:90%; max-width:380px; padding:25px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.5); position:relative; text-align:left;">
+        <button onclick="closeAdminResetModal()" style="position:absolute; top:12px; right:15px; border:none; background:none; font-size:20px; cursor:pointer; color:#64748b;">✕</button>
+        
+        <h3 style="margin-top:0; color:#0f172a; font-size:18px; font-weight:800;">🔑 Reset Admin Password</h3>
+        <p style="font-size:12px; color:#64748b; margin-bottom:15px;">Enter your username or email address to receive a 6-digit OTP code.</p>
+
+        <!-- Step 1: Identifier -->
+        <div id="adminOtpStep1">
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Username or Email</label>
+                <input type="text" id="adminResetIdentifier" placeholder="e.g. shahiswad_admin" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; box-sizing:border-box;">
+            </div>
+            <button onclick="sendAdminResetOTP()" id="btnAdminSendOtp" style="width:100%; background:#16a34a; color:#fff; padding:10px; border:none; border-radius:8px; font-weight:800; font-size:13px; cursor:pointer;">
+                📩 Send Verification OTP
+            </button>
+        </div>
+
+        <!-- Step 2: OTP & New Password -->
+        <div id="adminOtpStep2" style="display:none;">
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 12px; border-radius:8px; margin-bottom:12px; font-size:12px; color:#166534;" id="adminOtpNoticeMsg">
+                OTP sent to registered email!
+            </div>
+            
+            <div style="margin-bottom:10px;">
+                <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">6-Digit OTP Code</label>
+                <input type="text" id="adminResetOtp" maxlength="6" placeholder="Enter OTP" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; font-weight:bold; letter-spacing:2px; text-align:center; box-sizing:border-box;">
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">New Password</label>
+                <div class="password-wrapper">
+                    <input type="password" id="adminNewPassword" placeholder="Enter new password" style="width:100%; padding:8px 38px 8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                    <span class="eye-toggle" onclick="togglePasswordVisibility('adminNewPassword', 'eyeModalNew')" id="eyeModalNew">👁️</span>
+                </div>
+            </div>
+
+            <div style="margin-bottom:15px;">
+                <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:4px;">Confirm New Password</label>
+                <div class="password-wrapper">
+                    <input type="password" id="adminConfirmPassword" placeholder="Re-enter password" style="width:100%; padding:8px 38px 8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                    <span class="eye-toggle" onclick="togglePasswordVisibility('adminConfirmPassword', 'eyeModalConfirm')" id="eyeModalConfirm">👁️</span>
+                </div>
+            </div>
+
+            <button onclick="verifyAdminOTP()" id="btnAdminVerifyOtp" style="width:100%; background:#0284c7; color:#fff; padding:10px; border:none; border-radius:8px; font-weight:800; font-size:13px; cursor:pointer;">
+                ✅ Reset Password & Login
+            </button>
+        </div>
+
+        <div id="adminResetFeedback" style="margin-top:12px; font-size:12px; font-weight:600; text-align:center;"></div>
+    </div>
+</div>
+
+<script>
+function togglePasswordVisibility(fieldId, iconId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(iconId);
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.innerText = '🙈';
+    } else {
+        field.type = 'password';
+        icon.innerText = '👁️';
+    }
+}
+
+function openAdminResetModal() {
+    document.getElementById('adminResetModal').style.display = 'flex';
+    document.getElementById('adminOtpStep1').style.display = 'block';
+    document.getElementById('adminOtpStep2').style.display = 'none';
+    document.getElementById('adminResetFeedback').innerHTML = '';
+}
+
+function closeAdminResetModal() {
+    document.getElementById('adminResetModal').style.display = 'none';
+}
+
+async function sendAdminResetOTP() {
+    const identifier = document.getElementById('adminResetIdentifier').value.trim();
+    const feedback = document.getElementById('adminResetFeedback');
+    const btn = document.getElementById('btnAdminSendOtp');
+
+    if (!identifier) {
+        feedback.style.color = '#dc2626';
+        feedback.innerHTML = '⚠️ Please enter your Username or Email.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = 'Sending...';
+    feedback.style.color = '#0284c7';
+    feedback.innerHTML = 'Sending OTP code to email...';
+
+    try {
+        const response = await fetch('/api/request-pin-reset/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: identifier })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            feedback.innerHTML = '';
+            document.getElementById('adminOtpStep1').style.display = 'none';
+            document.getElementById('adminOtpStep2').style.display = 'block';
+            document.getElementById('adminOtpNoticeMsg').innerHTML = `✅ ${data.message}`;
+        } else {
+            feedback.style.color = '#dc2626';
+            feedback.innerHTML = `⚠️ ${data.message}`;
+        }
+    } catch (err) {
+        feedback.style.color = '#dc2626';
+        feedback.innerHTML = '⚠️ Connection error. Please try again.';
+    } finally {
+        btn.disabled = false;
+        btn.innerText = '📩 Send Verification OTP';
+    }
+}
+
+async function verifyAdminOTP() {
+    const otp = document.getElementById('adminResetOtp').value.trim();
+    const newPass = document.getElementById('adminNewPassword').value.trim();
+    const confirmPass = document.getElementById('adminConfirmPassword').value.trim();
+    const feedback = document.getElementById('adminResetFeedback');
+    const btn = document.getElementById('btnAdminVerifyOtp');
+
+    if (!otp || otp.length !== 6) {
+        feedback.style.color = '#dc2626';
+        feedback.innerHTML = '⚠️ Please enter 6-digit OTP code.';
+        return;
+    }
+
+    if (!newPass) {
+        feedback.style.color = '#dc2626';
+        feedback.innerHTML = '⚠️ Please enter a new password.';
+        return;
+    }
+
+    if (newPass !== confirmPass) {
+        feedback.style.color = '#dc2626';
+        feedback.innerHTML = '⚠️ Passwords do not match!';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = 'Verifying...';
+
+    try {
+        const response = await fetch('/api/verify-reset-pin/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ otp: otp, new_password: newPass })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            feedback.style.color = '#16a34a';
+            feedback.innerHTML = '🎉 Password updated successfully! Reloading login page...';
+            setTimeout(() => {
+                window.location.reload();
+            }, 2500);
+        } else {
+            feedback.style.color = '#dc2626';
+            feedback.innerHTML = `⚠️ ${data.message}`;
+        }
+    } catch (err) {
+        feedback.style.color = '#dc2626';
+        feedback.innerHTML = '⚠️ Server error. Please try again.';
+    } finally {
+        btn.disabled = false;
+        btn.innerText = '✅ Reset Password & Login';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Order #{{ order_id }} - Shahi Swad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .tracker-card {
+            max-width: 600px;
+            margin: 40px auto;
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+        .stepper {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            margin: 30px 0;
+        }
+        .stepper::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 10%;
+            right: 10%;
+            height: 4px;
+            background-color: #e0e0e0;
+            z-index: 1;
+        }
+        .step-progress {
+            position: absolute;
+            top: 20px;
+            left: 10%;
+            height: 4px;
+            background-color: #8B0000;
+            z-index: 1;
+            transition: width 0.4s ease;
+        }
+        .step-item {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+        .step-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+        .step-item.active .step-icon {
+            background-color: #8B0000;
+            color: white;
+            box-shadow: 0 0 0 5px rgba(139, 0, 0, 0.2);
+        }
+        .step-item.completed .step-icon {
+            background-color: #28a745;
+            color: white;
+        }
+        .step-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+        }
+        .step-item.active .step-label {
+            color: #8B0000;
+        }
+        .pulse-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #28a745;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container px-3">
+    <div class="card tracker-card p-4 bg-white">
+        <div class="text-center mb-3">
+            <h3 class="fw-bold text-dark mb-1">SHAHI SWAD</h3>
+            <p class="text-muted small">Live Kitchen Order Status</p>
+            <div class="badge bg-danger fs-6 px-3 py-2 rounded-pill">
+                Order #<span id="orderIdDisplay">{{ order_id }}</span> &bull; Table <span id="tableDisplay">-</span>
+            </div>
+        </div>
+
+        <div class="text-center my-2">
+            <span class="pulse-dot me-1"></span>
+            <span class="fw-bold text-success small" id="liveStatusText">Connecting to Kitchen...</span>
+        </div>
+
+        <!-- STEPPER PROGRESS BAR -->
+        <div class="stepper">
+            <div class="step-progress" id="stepProgressBar" style="width: 0%;"></div>
+            
+            <div class="step-item" id="step-received">
+                <div class="step-icon"><i class="fas fa-receipt"></i></div>
+                <div class="step-label">Received</div>
+            </div>
+            <div class="step-item" id="step-preparing">
+                <div class="step-icon"><i class="fas fa-utensils"></i></div>
+                <div class="step-label">Preparing</div>
+            </div>
+            <div class="step-item" id="step-served">
+                <div class="step-icon"><i class="fas fa-concierge-bell"></i></div>
+                <div class="step-label">Served</div>
+            </div>
+            <div class="step-item" id="step-completed">
+                <div class="step-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="step-label">Done</div>
+            </div>
+        </div>
+
+        <!-- ORDER ITEMS DETAIL -->
+        <div class="border-top pt-3 mt-4">
+            <h6 class="fw-bold mb-3"><i class="fas fa-list-ul me-2 text-danger"></i>Items Ordered</h6>
+            <ul class="list-group list-group-flush" id="orderItemsList">
+                <li class="list-group-item text-center text-muted">Loading order items...</li>
+            </ul>
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top fw-bold fs-5">
+                <span>Total Amount</span>
+                <span class="text-danger" id="totalAmountDisplay">₹0.00</span>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/?table=1" id="backToMenuBtn" class="btn btn-outline-secondary btn-sm rounded-pill px-4">
+                <i class="fas fa-arrow-left me-1"></i> Back to Menu
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+const orderId = {{ order_id }};
+const API_URL = `/api/orders/${orderId}/`;
+
+const statusMap = {
+    'received': { step: 1, text: 'Order Received in Kitchen', progress: '0%' },
+    'preparing': { step: 2, text: 'Chef is Preparing Your Food 🍳', progress: '33%' },
+    'served': { step: 3, text: 'Food Served at Table! 🍽️', progress: '66%' },
+    'completed': { step: 4, text: 'Order Completed. Thank You! ✨', progress: '100%' },
+    'cancelled': { step: 0, text: 'Order Cancelled', progress: '0%' }
+};
+
+async function fetchOrderStatus() {
+    try {
+        const response = await fetch(API_URL);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        updateUI(data);
+    } catch (err) {
+        console.error("Error fetching order status:", err);
+    }
+}
+
+function updateUI(data) {
+    document.getElementById('tableDisplay').innerText = data.table_number;
+    document.getElementById('totalAmountDisplay').innerText = `₹${parseFloat(data.total_amount).toFixed(2)}`;
+    document.getElementById('backToMenuBtn').href = `/?table=${data.table_number}`;
+
+    const currentStatus = data.order_status || 'received';
+    const config = statusMap[currentStatus] || statusMap['received'];
+
+    document.getElementById('liveStatusText').innerText = config.text;
+
+    // Update progress bar width
+    document.getElementById('stepProgressBar').style.width = config.progress;
+
+    // Update stepper item styles
+    const steps = ['received', 'preparing', 'served', 'completed'];
+    steps.forEach((stepName, index) => {
+        const element = document.getElementById(`step-${stepName}`);
+        if (!element) return;
+
+        element.classList.remove('active', 'completed');
+        if (index + 1 < config.step) {
+            element.classList.add('completed');
+        } else if (index + 1 === config.step) {
+            element.classList.add('active');
+        }
+    });
+
+    // Render items
+    if (data.items && data.items.length > 0) {
+        let itemsHtml = '';
+        data.items.forEach(item => {
+            itemsHtml += `
+                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                    <div>
+                        <span class="fw-semibold">${item.menu_item_name || 'Dish'}</span>
+                        <span class="badge bg-light text-dark border ms-1">x${item.quantity}</span>
+                    </div>
+                    <span class="fw-bold">₹${parseFloat(item.unit_price * item.quantity).toFixed(2)}</span>
+                </li>`;
+        });
+        document.getElementById('orderItemsList').innerHTML = itemsHtml;
+    }
+}
+
+// Initial fetch and auto-poll every 3 seconds
+fetchOrderStatus();
+setInterval(fetchOrderStatus, 3000);
+</script>
+</body>
+</html>

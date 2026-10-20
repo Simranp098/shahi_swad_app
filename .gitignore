@@ -1,0 +1,8 @@
+cat <<EOT > .gitignore
+venv/
+*.pyc
+__pycache__/
+db.sqlite3
+.DS_Store
+.vscode/
+EOT

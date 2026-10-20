@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Receipt - {{ order.order_id }}</title>
+    <style>
+        @page { size: 80mm auto; margin: 0; }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            width: 78mm;
+            margin: 0 auto;
+            padding: 5mm;
+            color: #000;
+            font-size: 12px;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+        .dashed-line { border-bottom: 1px dashed #000; margin: 6px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        td, th { padding: 2px 0; text-align: left; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+    <div class="no-print" style="margin-bottom: 10px; text-align: center;">
+        <button onclick="window.print()" style="padding: 6px 16px; font-weight: bold; cursor: pointer;">🖨️ Print Receipt</button>
+    </div>
+
+    <!-- Header -->
+    <div class="text-center">
+        <h2 class="bold" style="margin: 0; font-size: 16px;">HOTEL SHAHI SWAD</h2>
+        <p style="margin: 2px 0; font-size: 11px;">(ROYAL TASTE)</p>
+        <p style="margin: 2px 0; font-size: 10px;">{{ hotel_address }}</p>
+        <p style="margin: 2px 0; font-size: 10px;">Mob: {{ hotel_phone }}</p>
+    </div>
+
+    <div class="dashed-line"></div>
+
+    <!-- Order Metadata -->
+    <p style="margin: 2px 0;"><strong>Order ID:</strong> {{ order.order_id }}</p>
+    <p style="margin: 2px 0;"><strong>Date:</strong> {{ order.created_at|date:"d-M-Y h:i A" }}</p>
+    <p style="margin: 2px 0;"><strong>Customer:</strong> {{ order.customer_name }}</p>
+    <p style="margin: 2px 0;"><strong>Mobile:</strong> {{ order.mobile_number }}</p>
+    <p style="margin: 2px 0;"><strong>Address:</strong> {{ order.delivery_address }}</p>
+
+    <div class="dashed-line"></div>
+
+    <!-- Items Table -->
+    <table>
+        <thead>
+            <tr style="border-bottom: 1px solid #000;">
+                <th>Item</th>
+                <th class="text-center">Qty</th>
+                <th class="text-right">Amt</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.items.all %}
+            <tr>
+                <td>{{ item.item_name }}</td>
+                <td class="text-center">{{ item.quantity }}</td>
+                <td class="text-right">₹{{ item.get_total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="dashed-line"></div>
+
+    <!-- Bill Total -->
+    <table>
+        <tr class="bold" style="font-size: 14px;">
+            <td>GRAND TOTAL:</td>
+            <td class="text-right">₹{{ order.total_amount }}</td>
+        </tr>
+        <tr>
+            <td>Payment Mode:</td>
+            <td class="text-right">{{ order.get_payment_method_display }} ({{ order.get_payment_status_display }})</td>
+        </tr>
+    </table>
+
+    <div class="dashed-line"></div>
+
+    <div class="text-center" style="margin-top: 10px;">
+        <p class="bold" style="margin: 2px 0;">Thank You For Ordering!</p>
+        <p style="margin: 2px 0; font-size: 10px;">Visit Again - Hotel Shahi Swad</p>
+    </div>
+
+</body>
+</html>
