@@ -123,6 +123,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # Email Configuration (Gmail SMTP for PIN Recovery OTPs)
+# Email Configuration (Uses HTTPS Port 443 via Resend to bypass Render SMTP blocks)
 EMAIL_BACKEND = 'config.email_backend.ResendHTTPBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
